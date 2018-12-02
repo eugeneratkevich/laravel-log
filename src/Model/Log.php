@@ -2,106 +2,83 @@
 
 namespace Merkeleon\Log\Model;
 
-use Merkeleon\Log\Exseptions\LogException;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Merkeleon\Log\Exceptions\LogException;
 use Carbon\Carbon;
 
 abstract class Log
 {
-    protected static $attributes;
+    protected static $attributes = [
+        'uuid'       => 'uuid',
+        'created_at' => 'datetime',
+        'ip'         => 'string',
+        'user_agent' => 'string',
+        'event_type' => 'string',
+    ];
+
+    protected static $customAttributes = [];
 
     protected static $rules = [];
 
-    protected $values;
+    public static $dateTimeFormat = 'Y-m-d H:i:s';
 
-    protected $cast;
+    protected $values;
 
     protected static $table;
 
+    abstract public function toLogFileArray();
+
     public function __construct($row)
     {
-        $row = array_intersect_key($row, array_flip(static::$attributes));
+        $this->validate($row);
 
-        foreach ($row as $key => $value)
+        $this->values = array_intersect_key($row, array_flip(static::getAttributes()));
+    }
+
+    public static function getDefaultValues()
+    {
+        $attributes = static::getAttributes();
+
+        $values = [];
+
+        foreach ($attributes as $attribute)
         {
-            $this->values[$key] = $this->prepareCast($key, $value);
+            if ($defaultValue = static::getDefaultValue($attribute))
+            {
+                $values[$attribute] = $defaultValue;
+            }
         }
+
+        return $values;
     }
 
-    protected function prepareCast($key, $value)
+    protected static function getDefaultValue($attribute)
     {
-        if (is_null($value) || !array_key_exists($key, $this->cast))
+        $defaultValueMethodName = studly_method_name('get_' . $attribute . '_default_value');
+
+        if (!method_exists(static::class, $defaultValueMethodName))
         {
-            return $value;
+            return null;
         }
 
-        if (is_null($value)) {
-            return $value;
-        }
-
-        switch ($this->cast[$key]) {
-            case 'int':
-                return (int) $value;
-            case 'float':
-                return (float) $value;
-            case 'string':
-                return (string) $value;
-            case 'bool':
-                return (bool) $value;
-            case 'array':
-            case 'json':
-                return json_decode($value, true);
-            case 'datetime':
-                return $this->asDateTime($value);
-            default:
-                return $value;
-        }
+        return static::$defaultValueMethodName();
     }
 
-    protected function asDateTime($value)
+    protected static function getIpDefaultValue()
     {
-        // If this value is already a Carbon instance, we shall just return it as is.
-        // This prevents us having to re-instantiate a Carbon instance when we know
-        // it already is one, which wouldn't be fulfilled by the DateTime check.
-        if ($value instanceof Carbon) {
-            return $value;
-        }
-
-        // If the value is already a DateTime instance, we will just skip the rest of
-        // these checks since they will be a waste of time, and hinder performance
-        // when checking the field. We will just return the DateTime right away.
-        if ($value instanceof \DateTimeInterface) {
-            return new Carbon(
-                $value->format('Y-m-d H:i:s.u'), $value->getTimezone()
-            );
-        }
-
-        // If this value is an integer, we will assume it is a UNIX timestamp's value
-        // and format a Carbon object from this timestamp. This allows flexibility
-        // when defining your date fields as they might be UNIX timestamps here.
-        if (is_numeric($value)) {
-            return Carbon::createFromTimestamp($value);
-        }
-
-        // If the value is in simply year, month, day format, we will instantiate the
-        // Carbon instances from that format. Again, this provides for simple date
-        // fields on the database, while still supporting Carbonized conversion.
-        if ($this->isStandardDateFormat($value)) {
-            return Carbon::createFromFormat('Y-m-d', $value)->startOfDay();
-        }
-
-        // Finally, we will just assume this date is in the format used by default on
-        // the database connection and use that format to create the Carbon object
-        // that is returned back out to the developers after we convert it here.
-        return Carbon::createFromFormat(
-            'd/M/Y:H:i:s O', $value
-        );
+        return request()->ip();
     }
 
-    protected function isStandardDateFormat($value)
+    protected static function getUserAgentDefaultValue()
     {
-        return preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})$/', $value);
+        return request()->userAgent();
     }
 
+    protected static function getCreatedAtDefaultValue()
+    {
+        return new Carbon();
+    }
 
     public static function getTableName()
     {
@@ -110,7 +87,27 @@ abstract class Log
 
     public static function getAttributes()
     {
-        return static::$attributes;
+        return array_keys(static::getAttributesWithCasts());
+    }
+
+    public static function getAttributesWithCasts()
+    {
+        return array_merge(static::$attributes, static::$customAttributes);
+    }
+
+    public function __get($name)
+    {
+        if (!in_array($name, static::getAttributes()))
+        {
+            throw new LogException('Attribute ' . $name . 'not exists');
+        }
+
+        return array_get($this->values, $name);
+    }
+
+    public function getValues()
+    {
+        return $this->values;
     }
 
     public static function getRules()
@@ -118,15 +115,13 @@ abstract class Log
         return static::$rules;
     }
 
-    public function __get($name)
+    protected function validate(array $data)
     {
-        if (!in_array($name, static::$attributes))
+        $validator = Validator::make($data, static::$rules);
+
+        if ($validator->fails())
         {
-            throw new LogException('Attribute '. $name. 'not exists');
+            throw new LogException('Log is not valid' . $validator->getMessageBag());
         }
-
-        return array_get($this->values, $name);
     }
-
-
 }

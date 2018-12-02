@@ -1,18 +1,19 @@
 <?php
 
 
-namespace Merkeleon\Log\Repositories;
-
+namespace Merkeleon\Log\Drivers;
 
 use Merkeleon\ElasticReader\Elastic\SearchModelNew;
+use Merkeleon\Log\Exceptions\LogException;
+use Merkeleon\Log\Model\Log;
 
 class ElasticSearchLogDriver extends LogDriver
 {
     protected $elasticSearchModel;
 
-    public function __construct($logClassName)
+    public function __construct($logClassName, $logFile = null)
     {
-        parent::__construct($logClassName);
+        parent::__construct($logClassName, $logFile);
 
         $this->elasticSearchModel = new SearchModelNew(
             $this->getTableName(),
@@ -20,9 +21,9 @@ class ElasticSearchLogDriver extends LogDriver
         );
     }
 
-    public function save(array $data)
+    protected function saveToDb($row)
     {
-        return $this->elasticSearchModel->create($data);
+        return $this->elasticSearchModel->create($row);
     }
 
     public function query()
@@ -42,25 +43,27 @@ class ElasticSearchLogDriver extends LogDriver
 
     public function __call($name, $arguments)
     {
-        if (!method_exists($this->query(), $name))
+        if (!is_callable([$this->query(), $name]))
         {
-            throw  new LogException('method doesn\'t exists');
+            throw new LogException('Method' . $name .' doesn\'t exists in LogDriver');
         }
 
-        $this->query()->$name(...$arguments);
+        $this->query()
+             ->$name(...$arguments);
     }
 
     public function prepareHit($hit)
     {
-        $data = ['id' => array_get($hit, '_id')] + array_get($hit, '_source');
+        $data = ['uuid' => array_get($hit, '_id')] + array_get($hit, '_source');
 
-        return new $this->logClassName($data);
+        return $this->newLog($data);
     }
 
     public function matchSubString($name, $value, $searchInObject)
     {
         $name = $searchInObject ? null : $name;
 
-        return $this->query()->matchSubString($value, $name);
+        return $this->query()
+                    ->matchSubString($value, $name);
     }
 }

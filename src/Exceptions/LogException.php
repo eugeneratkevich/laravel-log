@@ -1,7 +1,7 @@
 <?php
 
 
-namespace Merkeleon\Log\Exseptions;
+namespace Merkeleon\Log\Exceptions;
 
 
 class LogException extends \Exception
