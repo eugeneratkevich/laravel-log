@@ -9,6 +9,13 @@
   "require-dev": {
     "phpunit/phpunit": "4.5.*"
   },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Merkeleon\\Log\\Providers\\MerkeleonLogProvider"
+      ]
+    }
+  },
   "autoload": {
     "psr-4": {
       "Merkeleon\\Log\\": "src/"

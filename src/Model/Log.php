@@ -27,8 +27,6 @@ abstract class Log
 
     protected static $table;
 
-    abstract public function toLogFileArray();
-
     public function __construct($row)
     {
         $this->validate($row);
@@ -51,33 +49,6 @@ abstract class Log
         }
 
         return $values;
-    }
-
-    protected static function getDefaultValue($attribute)
-    {
-        $defaultValueMethodName = studly_method_name('get_' . $attribute . '_default_value');
-
-        if (!method_exists(static::class, $defaultValueMethodName))
-        {
-            return null;
-        }
-
-        return static::$defaultValueMethodName();
-    }
-
-    protected static function getIpDefaultValue()
-    {
-        return request()->ip();
-    }
-
-    protected static function getUserAgentDefaultValue()
-    {
-        return request()->userAgent();
-    }
-
-    protected static function getCreatedAtDefaultValue()
-    {
-        return new Carbon();
     }
 
     public static function getTableName()
@@ -123,5 +94,37 @@ abstract class Log
         {
             throw new LogException('Log is not valid' . $validator->getMessageBag());
         }
+    }
+
+    public function toLogFileArray()
+    {
+        return [];
+    }
+
+    protected static function getDefaultValue($attribute)
+    {
+        $defaultValueMethodName = studly_method_name('get_' . $attribute . '_default_value');
+
+        if (!method_exists(static::class, $defaultValueMethodName))
+        {
+            return null;
+        }
+
+        return static::$defaultValueMethodName();
+    }
+
+    protected static function getIpDefaultValue()
+    {
+        return request()->ip();
+    }
+
+    protected static function getUserAgentDefaultValue()
+    {
+        return request()->userAgent();
+    }
+
+    protected static function getCreatedAtDefaultValue()
+    {
+        return new Carbon();
     }
 }

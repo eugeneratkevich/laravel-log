@@ -32,20 +32,40 @@ class LogRepository
 
     protected function checkConfig($config)
     {
-        if ($config
-            && is_array($config)
-            && array_key_exists('driver', $config)
-            && array_key_exists('class', $config)
-            && class_exists($config['class'])
-            && is_subclass_of($config['class'], Log::class)
-            && in_array($config['driver'], array_keys($this->drivers))
-        )
+        if (!$config)
         {
-            return;
+            throw new LogException('There is no merkeleon log config');
         }
 
-        throw new LogException('Invalid config');
+        if (!is_array($config))
+        {
+            throw new LogException('Merkeleon log config must be array');
+        }
 
+        if (!array_key_exists('driver', $config))
+        {
+            throw new LogException('You should point merkeleon log driver');
+        }
+
+        if (!array_key_exists('class', $config))
+        {
+            throw new LogException('You should point merkeleon log class');
+        }
+
+        if (!class_exists($config['class']))
+        {
+            throw new LogException('There is no class ' . $config['class']);
+        }
+
+        if (!is_subclass_of($config['class'], Log::class))
+        {
+            throw new LogException('Merkeleon log class should extend ' . Log::class . ' class');
+        }
+
+        if (!in_array($config['driver'], array_keys($this->drivers)))
+        {
+            throw new LogException('Merkeleon log driver can be: ' . implode(",", $this->drivers));
+        }
     }
 
     protected function getDriver($driverName, $logClassName, $logFile)
