@@ -38,6 +38,7 @@ class MysqlLogDriver extends LogDriver
         $results = $total ? $this->forPage($page, $perPage)
                                  ->get(['*']) : collect();
 
+
         $results = $results->map(
             function ($row) {
                 return $this->prepareLog((array)$row);
@@ -71,13 +72,15 @@ class MysqlLogDriver extends LogDriver
                  ->where($name, '<=', $to);
         }
 
-        return $this->query();
+        return $this;
     }
 
     public function matchSubString($name, $value, $searchInObject)
     {
         $this->query()
              ->where($name, 'like', '%' . $value . '%');
+
+        return $this;
     }
 
     public function __call($name, $arguments)
@@ -104,6 +107,8 @@ class MysqlLogDriver extends LogDriver
                      $query->orWhere($key, $value);
                  }
              });
+
+        return $this;
     }
 
     protected function prepareLog($row)

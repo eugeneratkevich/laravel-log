@@ -50,6 +50,8 @@ class ElasticSearchLogDriver extends LogDriver
 
         $this->query()
              ->$name(...$arguments);
+
+        return $this;
     }
 
     public function prepareHit($hit)
