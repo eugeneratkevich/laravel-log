@@ -1,7 +1,7 @@
 # Laravel log
 Laravel module for logs generating 
 
-##Installation
+## Installation
 First, require the package using Composer:
 
 `composer require merkeleon/laravel-log`
