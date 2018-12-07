@@ -1,12 +1,12 @@
 # Laravel log
 Laravel module for logs generating 
 
-##Installation
+## Installation
 First, require the package using Composer:
 
 `composer require merkeleon/laravel-log`
 
-0. Add new class Log that should extend Merkeleon\Log\Model\Log
+1. Add new class Log that should extend Merkeleon\Log\Model\Log
 
 0. Custom your log class.
 
