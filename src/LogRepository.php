@@ -30,6 +30,11 @@ class LogRepository
         $this->logClassName = $config['class'];
     }
 
+    public static function make($logName)
+    {
+        return new static($logName);
+    }
+
     protected function checkConfig($config)
     {
         if (!$config)
@@ -75,7 +80,7 @@ class LogRepository
         return new $driverClass($logClassName, $logFile);
     }
 
-    public function make(array $data)
+    public function write(array $data)
     {
         $data = array_merge($data, $this->logClassName::getDefaultValues());
 

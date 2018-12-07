@@ -89,9 +89,9 @@ First, require the package using Composer:
 
 ##Examples
 
-    $auditLogRepository = new LogRepository('audit_log');
+    $auditLogRepository = LogRepository::make('audit_log');
 
-    $auditLogRepository->make([
+    $auditLogRepository->write([
         'user_id'         => 1,
         'event_type'      => 'user_banned',
         'user_id_related' => 2,
