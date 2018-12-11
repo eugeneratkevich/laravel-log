@@ -82,7 +82,7 @@ class LogRepository
 
     public function write(array $data)
     {
-        $data = array_merge($data, $this->logClassName::getDefaultValues());
+        $data = array_merge($this->logClassName::getDefaultValues(), $data);
 
         $this->logDriver->makeLog($data);
     }
