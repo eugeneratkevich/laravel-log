@@ -43,6 +43,11 @@ class ElasticSearchLogDriver extends LogDriver
 
     public function __call($name, $arguments)
     {
+        if (method_exists($this->elasticSearchModel, $name))
+        {
+            return $this->elasticSearchModel->$name(...$arguments);
+        }
+
         if (!is_callable([$this->query(), $name]))
         {
             throw new LogException('Method' . $name .' doesn\'t exists in LogDriver');
