@@ -21,6 +21,13 @@ class ElasticSearchLogDriver extends LogDriver
         );
     }
 
+    public function orderBy($orderField, $orderDirection)
+    {
+        $this->elasticSearchModel->orderBy($orderField, $orderDirection);
+
+        return $this;
+    }
+
     protected function saveToDb($row)
     {
         return $this->elasticSearchModel->create($row);
@@ -34,11 +41,6 @@ class ElasticSearchLogDriver extends LogDriver
     public function paginate($perPage)
     {
         return $this->elasticSearchModel->paginate($perPage);
-    }
-
-    public function get()
-    {
-        return $this->elasticSearchModel->get();
     }
 
     public function __call($name, $arguments)
@@ -72,5 +74,20 @@ class ElasticSearchLogDriver extends LogDriver
 
         return $this->query()
                     ->matchSubString($value, $name);
+    }
+
+    public function addCollectionCallbacks(array $callbacks)
+    {
+        foreach ($callbacks as $callback)
+        {
+            $this->elasticSearchModel->addCallback($callback);
+        }
+
+        return $this;
+    }
+
+    public function find($id)
+    {
+        return $this->where('id', $id)->first();
     }
 }

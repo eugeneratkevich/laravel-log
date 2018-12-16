@@ -6,17 +6,23 @@ namespace Merkeleon\Log\Drivers;
 use Illuminate\Database\Eloquent\JsonEncodingException;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
-use Merkeleon\Log\Model\Log;
+use Merkeleon\Log\Exceptions\LogException;
 use Ramsey\Uuid\Uuid;
 
 class MysqlLogDriver extends LogDriver
 {
     protected $query;
+    protected $collectionCallbacks = [];
 
     protected function saveToDb($row)
     {
-        return DB::table($this->getTableName())
-                 ->insert($row);
+        unset($row['id']);
+
+        $lastInsertId = DB::table($this->getTableName())
+                          ->insertGetId($row);
+
+        return $this->find($lastInsertId);
+
     }
 
     public function query()
@@ -33,18 +39,15 @@ class MysqlLogDriver extends LogDriver
     {
         $page = Paginator::resolveCurrentPage();
 
-        $total = $this->getCountForPagination(['*']);
+        $total = $this->getTotal();
 
         $results = $total ? $this->forPage($page, $perPage)
                                  ->get(['*']) : collect();
 
-
-        $results = $results->map(
-            function ($row) {
-                return $this->prepareLog((array)$row);
-
-            }
-        );
+        foreach ($this->collectionCallbacks as $callback)
+        {
+            $callback($results);
+        }
 
         return $this->paginator($results, $total, $perPage, $page, [
             'path'     => Paginator::resolveCurrentPath(),
@@ -52,10 +55,74 @@ class MysqlLogDriver extends LogDriver
         ]);
     }
 
+    public function getTotal()
+    {
+        $query = clone($this->query());
+
+        $row = $query->addSelect(DB::raw('COUNT(id) as total'))
+                     ->first();
+
+        return $row->total;
+    }
+
+    public function find($id)
+    {
+        $row = $this->query()
+                    ->find($id);
+
+        if ($row)
+        {
+            return $this->prepareLog((array) $row);
+        }
+
+        return null;
+    }
+
     public function get()
     {
-        return $this->prepareLog($this->query()
-                                      ->get());
+        return $this->query()
+                    ->get()
+                    ->map(function ($item) {
+                        return $this->prepareLog((array)$item);
+                    });
+
+    }
+
+    public function first()
+    {
+        $row = $this->query()
+                           ->first();
+        if ($row)
+        {
+            return $this->prepareLog((array) $row);
+        }
+
+        return null;
+    }
+
+    public function firstOrFail()
+    {
+        if ($first = $this->first())
+        {
+            return $first;
+        }
+
+        throw new LogException('Model not found');
+
+    }
+
+    public function chunkById($count, callable $callback)
+    {
+        $newCallback = function ($rows) use ($callback) {
+            $rows = $rows->map(function ($item) {
+                return $this->prepareLog((array)$item);
+            });
+
+            $callback($rows);
+        };
+
+        return $this->query()
+                    ->chunkById($count, $newCallback);
     }
 
     public function range($name, $from, $to)
@@ -87,11 +154,13 @@ class MysqlLogDriver extends LogDriver
     {
         if (!is_callable([$this->query(), $name]))
         {
-            throw  new LogException('Method' . $name .' doesn\'t exists in LogDriver');
+            throw  new LogException('Method' . $name . ' doesn\'t exists in LogDriver');
         }
 
-        return $this->query()
-                    ->$name(...$arguments);
+        $this->query()
+             ->$name(...$arguments);
+
+        return $this;
     }
 
     public function whereOr(array $conditions)
@@ -138,5 +207,13 @@ class MysqlLogDriver extends LogDriver
         }
 
         return $value;
+    }
+
+
+    public function addCollectionCallbacks(array $collectionCallbacks)
+    {
+        $this->collectionCallbacks = $collectionCallbacks;
+
+        return $this;
     }
 }

@@ -7,7 +7,9 @@ use Carbon\Carbon;
 use Illuminate\Container\Container;
 use Illuminate\Database\Eloquent\JsonEncodingException;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Merkeleon\Log\Exceptions\LogException;
 use Merkeleon\Log\Model\Log;
 
 
@@ -15,6 +17,7 @@ abstract class LogDriver
 {
     protected $logClassName;
     protected $logFile;
+    protected $collectionCallbacks;
 
     abstract protected function saveToDb($row);
 
@@ -86,17 +89,19 @@ abstract class LogDriver
     public function makeLog($data)
     {
         $log = $this->newLog($data);
-        $this->save($log);
+
+        return $this->save($log);
     }
 
     public function save(Log $log)
     {
         $this->saveToFile($log);
         $values = $this->prepareValues($log);
-        $this->saveToDb($values);
+
+        return  $this->saveToDb($values);
     }
 
-    public function newLog($data)
+    public function newLog(array $data)
     {
         $data = $this->prepareData($data);
 
@@ -237,5 +242,64 @@ abstract class LogDriver
 
         $line = implode(' ', $log->toLogFileArray()) . "\n";
         file_put_contents($this->logFile, $line, FILE_APPEND);
+    }
+
+    public function with($arguments)
+    {
+        if (!is_array($arguments))
+        {
+            $arguments = [$arguments];
+        }
+
+        $relations = array_intersect_key(
+            $this->logClassName::getRelations(),
+            array_flip($arguments)
+        );
+
+        $callbacks = $this->prepareCollectionCallback($relations);
+
+        $this->addCollectionCallbacks($callbacks);
+
+        return $this;
+    }
+
+    protected function prepareCollectionCallback($relations)
+    {
+        $callbacks = [];
+        foreach ($relations as $relationKey => $relation)
+        {
+            $method = studly_method_name('prepare_' . $relation['type'] . '_relation');
+            if (!method_exists($this, $method))
+            {
+                throw new LogException('There is no method ' . $method);
+            }
+
+            $callbacks[] = $this->$method($relationKey, $relation);
+        }
+
+        return $callbacks;
+    }
+
+    protected function prepareOneRelation($relationKey, $relation)
+    {
+        return
+            function (Collection $collection) use ($relationKey, $relation) {
+                $foreignIds = $collection->map(function ($item) use ($relation) {
+                    return $item->{$relation['foreign_id']};
+                })->toArray();
+
+                $relationList = $relation['class']::whereIn($relation['local_id'], $foreignIds)
+                                                  ->get()
+                                                  ->keyBy($relation['local_id']);
+
+                $collection->each(
+                    function ($item) use ($relation, $relationKey, $relationList) {
+                        if (optional($item)->{$relation['foreign_id']})
+                        {
+                            $item->addValue($relationKey, $relationList->get($item->{$relation['foreign_id']}));
+                        }
+                    }
+                );
+            };
     }
 }

@@ -84,7 +84,7 @@ class LogRepository
     {
         $data = array_merge($this->logClassName::getDefaultValues(), $data);
 
-        $this->logDriver->makeLog($data);
+        return $this->logDriver->makeLog($data);
     }
 
     public function __call($name, $arguments)
@@ -100,5 +100,12 @@ class LogRepository
     public function getDateFormat()
     {
         return $this->logClassName::$dateTimeFormat;
+    }
+
+    public function with($arguments)
+    {
+        $this->logDriver->with($arguments);
+
+        return $this;
     }
 }
