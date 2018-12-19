@@ -12,9 +12,6 @@ abstract class Log
     protected static $attributes = [
         'uuid'       => 'uuid',
         'created_at' => 'datetime',
-        'ip'         => 'string',
-        'user_agent' => 'string',
-        'event_type' => 'string',
     ];
 
     protected static $customAttributes = [];
@@ -22,6 +19,8 @@ abstract class Log
     protected static $rules = [];
 
     public static $dateTimeFormat = 'Y-m-d H:i:s';
+
+    protected static $relations;
 
     protected $values;
 
@@ -42,13 +41,16 @@ abstract class Log
 
         foreach ($attributes as $attribute)
         {
-            if ($defaultValue = static::getDefaultValue($attribute))
+            $defaultValue = static::getDefaultValue($attribute);
+
+            if ($defaultValue !== null)
             {
                 $values[$attribute] = $defaultValue;
             }
         }
 
         return $values;
+
     }
 
     public static function getTableName()
@@ -58,7 +60,10 @@ abstract class Log
 
     public static function getAttributes()
     {
-        return array_keys(static::getAttributesWithCasts());
+        return array_merge(
+            array_keys(static::getAttributesWithCasts()),
+            array_keys(static::$relations)
+        );
     }
 
     public static function getAttributesWithCasts()
@@ -70,7 +75,21 @@ abstract class Log
     {
         if (!in_array($name, static::getAttributes()))
         {
-            throw new LogException('Attribute ' . $name . 'not exists');
+            throw new LogException('Attribute ' . $name . ' not exists');
+        }
+
+        if (array_get($this->values, $name) === null
+            && array_key_exists($name, static::$relations)
+        )
+        {
+            $relation = static::$relations[$name];
+
+            $relationId = array_get($this->values, $relation['foreign_id']);
+            if ($relationId)
+            {
+                $this->values[$name] = $relation['class']::where($relation['local_id'], $relationId)
+                                                         ->first();
+            }
         }
 
         return array_get($this->values, $name);
@@ -79,6 +98,18 @@ abstract class Log
     public function getValues()
     {
         return $this->values;
+    }
+    
+    public function addValue($name, $value)
+    {
+        if (!in_array($name, static::getAttributes()))
+        {
+            throw new LogException('Attribute ' . $name . ' not exists');
+        }
+
+        $this->values[$name] = $value;
+
+        return $this;
     }
 
     public static function getRules()
@@ -104,7 +135,6 @@ abstract class Log
     protected static function getDefaultValue($attribute)
     {
         $defaultValueMethodName = studly_method_name('get_' . $attribute . '_default_value');
-
         if (!method_exists(static::class, $defaultValueMethodName))
         {
             return null;
@@ -113,18 +143,13 @@ abstract class Log
         return static::$defaultValueMethodName();
     }
 
-    protected static function getIpDefaultValue()
-    {
-        return request()->ip();
-    }
-
-    protected static function getUserAgentDefaultValue()
-    {
-        return request()->userAgent();
-    }
-
     protected static function getCreatedAtDefaultValue()
     {
         return new Carbon();
+    }
+
+    public static function getRelations()
+    {
+        return static::$relations;
     }
 }
