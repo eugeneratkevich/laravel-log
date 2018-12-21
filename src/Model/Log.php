@@ -20,7 +20,7 @@ abstract class Log
 
     public static $dateTimeFormat = 'Y-m-d H:i:s';
 
-    protected static $relations;
+    protected static $relations = [];
 
     protected $values;
 
