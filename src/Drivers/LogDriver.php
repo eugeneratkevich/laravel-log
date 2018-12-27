@@ -5,12 +5,11 @@ namespace Merkeleon\Log\Drivers;
 
 use Carbon\Carbon;
 use Illuminate\Container\Container;
-use Illuminate\Database\Eloquent\JsonEncodingException;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 use Merkeleon\Log\Exceptions\LogException;
 use Merkeleon\Log\Model\Log;
+use Ramsey\Uuid\Uuid;
 
 
 abstract class LogDriver
@@ -301,5 +300,15 @@ abstract class LogDriver
                     }
                 );
             };
+    }
+
+    protected function fromCastUuid($value)
+    {
+        if (is_null($value))
+        {
+            return (string)Uuid::uuid4();
+        }
+
+        return $value;
     }
 }
