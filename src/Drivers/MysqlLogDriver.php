@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\JsonEncodingException;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
 use Merkeleon\Log\Exceptions\LogException;
-use Ramsey\Uuid\Uuid;
 
 class MysqlLogDriver extends LogDriver
 {
@@ -183,16 +182,6 @@ class MysqlLogDriver extends LogDriver
     protected function prepareLog($row)
     {
         return $this->newLog($row);
-    }
-
-    protected function fromCastUuid($value)
-    {
-        if (is_null($value))
-        {
-            return (string)Uuid::uuid4();
-        }
-
-        return $value;
     }
 
     protected function fromCastArray(array $value)
