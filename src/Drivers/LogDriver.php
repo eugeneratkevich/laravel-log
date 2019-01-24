@@ -301,14 +301,4 @@ abstract class LogDriver
                 );
             };
     }
-
-    protected function fromCastUuid($value)
-    {
-        if (is_null($value))
-        {
-            return (string)Uuid::uuid4();
-        }
-
-        return $value;
-    }
 }

@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Merkeleon\Log\Exceptions\LogException;
 use Carbon\Carbon;
+use Ramsey\Uuid\Uuid;
 
 abstract class Log
 {
@@ -99,7 +100,7 @@ abstract class Log
     {
         return $this->values;
     }
-    
+
     public function addValue($name, $value)
     {
         if (!in_array($name, static::getAttributes()))
@@ -146,6 +147,11 @@ abstract class Log
     protected static function getCreatedAtDefaultValue()
     {
         return new Carbon();
+    }
+
+    protected static function getUuidDefaultValue()
+    {
+        return (string)Uuid::uuid4();
     }
 
     public static function getRelations()
