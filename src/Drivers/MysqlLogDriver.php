@@ -159,7 +159,7 @@ class MysqlLogDriver extends LogDriver
         $this->query()
              ->$name(...$arguments);
 
-        return $this;
+        return $this->logRepository;
     }
 
     public function whereOr(array $conditions)

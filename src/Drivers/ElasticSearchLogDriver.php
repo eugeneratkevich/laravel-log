@@ -10,9 +10,9 @@ class ElasticSearchLogDriver extends LogDriver
 {
     protected $elasticSearchModel;
 
-    public function __construct($logClassName, $logFile = null)
+    public function __construct($logClassName, $logRepository, $logFile = null)
     {
-        parent::__construct($logClassName, $logFile);
+        parent::__construct($logClassName, $logRepository, $logFile);
 
         $this->elasticSearchModel = new SearchModelNew(
             $this->getTableName(),
@@ -57,7 +57,7 @@ class ElasticSearchLogDriver extends LogDriver
         $this->query()
              ->$name(...$arguments);
 
-        return $this;
+        return $this->logRepository;
     }
 
     public function prepareHit($hit)

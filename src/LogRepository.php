@@ -77,7 +77,7 @@ class LogRepository
     {
         $driverClass = $this->drivers[$driverName];
 
-        return new $driverClass($logClassName, $logFile);
+        return new $driverClass($logClassName, $this, $logFile);
     }
 
     public function write(array $data)

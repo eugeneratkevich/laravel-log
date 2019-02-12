@@ -8,22 +8,23 @@ use Illuminate\Container\Container;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Merkeleon\Log\Exceptions\LogException;
+use Merkeleon\Log\LogRepository;
 use Merkeleon\Log\Model\Log;
-use Ramsey\Uuid\Uuid;
-
 
 abstract class LogDriver
 {
     protected $logClassName;
     protected $logFile;
     protected $collectionCallbacks;
+    protected $logRepository;
 
     abstract protected function saveToDb($row);
 
-    public function __construct($logClassName, $logFile = null)
+    public function __construct($logClassName, LogRepository $logRepository, $logFile = null)
     {
-        $this->logClassName = $logClassName;
-        $this->logFile      = $logFile;
+        $this->logClassName  = $logClassName;
+        $this->logFile       = $logFile;
+        $this->logRepository = $logRepository;
     }
 
     protected function getTableName()
@@ -97,7 +98,7 @@ abstract class LogDriver
         $this->saveToFile($log);
         $values = $this->prepareValues($log);
 
-        return  $this->saveToDb($values);
+        return $this->saveToDb($values);
     }
 
     public function newLog(array $data)
@@ -287,9 +288,15 @@ abstract class LogDriver
                     return $item->{$relation['foreign_id']};
                 })->toArray();
 
-                $relationList = $relation['class']::whereIn($relation['local_id'], $foreignIds)
-                                                  ->get()
-                                                  ->keyBy($relation['local_id']);
+                $relationList = $relation['class']::whereIn($relation['local_id'], array_unique($foreignIds));
+
+                if (!empty($relation['with']))
+                {
+                    $relationList->with($relation['with']);
+                }
+
+                $relationList = $relationList->get()
+                                             ->keyBy($relation['local_id']);
 
                 $collection->each(
                     function ($item) use ($relation, $relationKey, $relationList) {

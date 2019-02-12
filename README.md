@@ -43,9 +43,9 @@ First, require the package using Composer:
         protected static $table = 'audit_logs';
     
         protected static $customAttributes = [
-            'user_id' => 'int',
+            'user_id'         => 'int',
             'user_id_related' => 'int',
-            'data' => 'array',
+            'data'            => 'array',
         ];
     
         protected static $rules = [
@@ -65,7 +65,7 @@ First, require the package using Composer:
                 "user_id"            => $this->user_id,
                 "user_id_related"    => empty($this->user_id_related) ? '-' : $this->user_id_related,
                 "user_agent"         => '"' . $this->user_agent . '"',
-                "data"               => json_encode($this->data)
+                "data"               => json_encode($this->data),
             ];
         }
     
